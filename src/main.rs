@@ -1,22 +1,24 @@
-#[allow(dead_code, unused_imports)]
-//TODO REMOVE above allow
-use std::fs::File;
+extern crate core;
 
-use chrono::{DateTime, NaiveDate, Utc};
+use std::path::Path;
+
+use chrono::{DateTime, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use clap::{command, Parser};
 use serde::Deserialize;
-use std::collections::HashMap;
+
+mod parse;
+mod filter;
+mod process;
 
 //
 #[derive(Parser, Debug)]
-#[command(name = "MyApp")]
+#[command(name = "Quantcast")]
 #[command(version = "1.0")]
-#[command(about = "Quantcast app", long_about = None)]
+#[command(about = "Quantcast App", long_about = None)]
 pub struct Cli {
-    /// Date in format YYYY-MM-DD.
+    /// Date in format YYYY-MM-DD
     #[arg(short, long, value_name = "date")]
     date: NaiveDate,
-
     /// Input file
     #[arg(short, long, value_name = "file")]
     file: String,
@@ -24,74 +26,47 @@ pub struct Cli {
 
 #[derive(Deserialize, Debug)]
 pub struct Record {
+    // Cookie identifier
     cookie: String,
+    // Timestamp of when cookie was seen
     timestamp: DateTime<Utc>,
 }
 
-fn parse(file: String) -> Vec<Record> {
-    let mut reader =  csv::Reader::from_path(file.clone())
-        .expect(&format!("Failed to read csv file {}", file));
-
-    let mut records: Vec<Record> = Vec::new();
-    for record in reader.deserialize() {
-        let record: Record = record.expect(&format!("Invalid record {:?}", record));
-        records.push(record);
-    }
-
-    records
-}
-
-fn filter(date: NaiveDate, records: Vec<Record>) -> Vec<Record> {
-    let mut filtered: Vec<Record> = Vec::new();
-    for r in records {
-        if r.timestamp.date_naive() == date {
-            filtered.push(r);
-        }
-    }
-
-    filtered
-}
-
-fn process(records: Vec<Record>) {
-    let mut cookies = HashMap::new();
-    let mut max_count = 1;
-    for r in records {
-        match cookies.get_mut(&r.cookie) {
-            None => {
-                let _ = cookies.insert(r.cookie, 1);
-            }
-            Some(c) => {
-                let count = *c + 1;
-                if count > max_count {
-                    max_count = count;
-                }
-                let _ = cookies.insert(r.cookie, count);
-            }
-        }
-    }
-
-    for cookie in cookies.keys() {
-        let count = *cookies.get(cookie).unwrap();
-        if count == max_count {
-            println!("{}", cookie);
+// For easier testing
+impl Record {
+    pub fn from(cookie: String, timestamp: NaiveDateTime) -> Record {
+        let date_time: DateTime<Utc> = Utc.from_local_datetime(&timestamp).unwrap();
+        Record {
+            cookie,
+            timestamp: date_time,
         }
     }
 }
+
+fn run(file: String, date: NaiveDate) -> Vec<String> {
+    let records = match parse::parse_file(Path::new(&file)) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    let records = filter::filter_by_date(date, records);
+    if records.is_empty() {
+        eprintln!("Error: No records for date {}", date);
+        std::process::exit(1);
+    }
+
+    process::process_records(records)
+}
+
 
 fn main() {
     let cli: Cli = Cli::parse();
-    println!("{:#?}", cli);
 
-    let records = parse(cli.file);
-    if records.is_empty() {
-        panic!("Empty file")
+    let results = run(cli.file, cli.date);
+    for cookie in results {
+        println!("{}", cookie);
     }
-
-    let records = filter(cli.date, records);
-    if records.is_empty() {
-        panic!("No records with given date {}", cli.date)
-    }
-    println!("{:?}", records);
-
-    process(records);
 }
