@@ -1,34 +1,34 @@
 use std::path::Path;
 
-use crate::Record;
+use crate::Cookie;
 
 //
 // Read and parse given CSV file
 //
-pub fn parse_file(file: &Path) -> Result<Vec<Record>, String> {
+pub fn parse_file(file: &Path) -> Result<Vec<Cookie>, String> {
     // defaults to skip first record as header
+    // CSV library used to parse file as you should NEVER roll your own
     let mut reader = match csv::Reader::from_path(file) {
         Ok(r) => r,
         Err(e) => return Err(format!("Failed to read csv file {:?}: {}", file, e).to_string())
     };
 
     // Deserialize records and create list
-    let mut records: Vec<Record> = Vec::new();
-    for record in reader.deserialize() {
+    let mut cookies: Vec<Cookie> = Vec::new();
+    for cookie in reader.deserialize() {
         // unwrap result
-        let record: Record = match record {
+        let cookie: Cookie = match cookie {
             Ok(r) => r,
             Err(e) => return Err(format!("Failed to parse record: {}", e)),
         };
-        // .expect(&format!("Invalid record"));
-        records.push(record);
+        cookies.push(cookie);
     }
 
-    if records.is_empty() {
-        return Err("File is empty".to_string());
+    if cookies.is_empty() {
+        return Err("File is empty".to_string())
     }
 
-    Ok(records)
+    Ok(cookies)
 }
 
 #[cfg(test)]

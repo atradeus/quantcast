@@ -12,6 +12,7 @@ mod process;
 
 //
 #[derive(Parser, Debug)]
+
 #[command(name = "Quantcast")]
 #[command(version = "1.0")]
 #[command(about = "Quantcast App", long_about = None)]
@@ -24,8 +25,9 @@ pub struct Cli {
     file: String,
 }
 
+// Cookie, id and timestamp
 #[derive(Deserialize, Debug)]
-pub struct Record {
+pub struct Cookie {
     // Cookie identifier
     cookie: String,
     // Timestamp of when cookie was seen
@@ -33,39 +35,42 @@ pub struct Record {
 }
 
 // For easier testing
-impl Record {
-    pub fn from(cookie: String, timestamp: NaiveDateTime) -> Record {
+impl Cookie {
+    pub fn from(cookie: String, timestamp: NaiveDateTime) -> Cookie {
+        // For this exercise, time and timezone are not relevant
         let date_time: DateTime<Utc> = Utc.from_local_datetime(&timestamp).unwrap();
-        Record {
+        Cookie {
             cookie,
             timestamp: date_time,
         }
     }
 }
 
-fn run(file: String, date: NaiveDate) -> Vec<String> {
+fn run_app(file: String, date: NaiveDate) -> Vec<String> {
+    // Parse file
     let records = match parse::parse_file(Path::new(&file)) {
-        Ok(r) => r,
+        Ok(c) => c,
         Err(e) => {
             eprintln!("Error: {}", e);
             std::process::exit(1);
         }
     };
 
-    let records = filter::filter_by_date(date, records);
-    if records.is_empty() {
+    // Filter cookies
+    let cookies = filter::filter_by_date(date, records);
+    if cookies.is_empty() {
         eprintln!("Error: No records for date {}", date);
         std::process::exit(1);
     }
 
-    process::process_records(records)
+    process::process_cookies(cookies)
 }
 
 
 fn main() {
     let cli: Cli = Cli::parse();
 
-    let results = run(cli.file, cli.date);
+    let results = run_app(cli.file, cli.date);
     for cookie in results {
         println!("{}", cookie);
     }

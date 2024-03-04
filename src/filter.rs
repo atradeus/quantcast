@@ -1,11 +1,11 @@
 use chrono::NaiveDate;
 
-use crate::Record;
+use crate::Cookie;
 
 // Filter records by given date
 // returns filtered list
-pub fn filter_by_date(date: NaiveDate, records: Vec<Record>) -> Vec<Record> {
-    let mut filtered: Vec<Record> = Vec::new();
+pub fn filter_by_date(date: NaiveDate, records: Vec<Cookie>) -> Vec<Cookie> {
+    let mut filtered: Vec<Cookie> = Vec::new();
     for r in records {
         if r.timestamp.date_naive() == date {
             filtered.push(r);
@@ -24,9 +24,9 @@ mod tests {
     #[test]
     fn test_filter_by_date() {
         let data = vec!(
-            Record::from("AtY0laUfhglK3lC7".to_string(), NaiveDateTime::new(
+            Cookie::from("AtY0laUfhglK3lC7".to_string(), NaiveDateTime::new(
                 NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(), NaiveTime::default())),
-            Record::from("5UAVanZf6UtGyKVS".to_string(), NaiveDateTime::new(
+            Cookie::from("5UAVanZf6UtGyKVS".to_string(), NaiveDateTime::new(
                 NaiveDate::from_ymd_opt(1970, 1, 2).unwrap(), NaiveTime::default()))
         );
 
